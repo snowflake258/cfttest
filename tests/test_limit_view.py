@@ -7,6 +7,7 @@ async def create_limit(cli):
         '/limit',
         data=json.dumps(dict(country="RUS", currency="RUB", max_sum_per_month="1000.15"))
     )
+    print(await resp.json())
     return (await resp.json())['limit_id']
 
 
@@ -14,7 +15,8 @@ async def test_limit_view_get(cli):
     resp = await cli.get('/limit')
     assert resp.status == 200
 
-    resp = await cli.get('/limit/1')
+    limit_id = await create_limit(cli)
+    resp = await cli.get(f'/limit/{limit_id}')
     assert resp.status == 200
 
     resp = await cli.get('/limit/0')

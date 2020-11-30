@@ -1,9 +1,25 @@
-from db.models import limit
+from sqlalchemy import select
+from itertools import groupby
+from db.models import limit, transfer
 
 
 class LimitService:
     def __init__(self, db):
         self.__db = db
+
+    @property
+    def __select_data(self):
+        return select([
+                limit.c.id,
+                limit.c.country,
+                limit.c.currency,
+                limit.c.max_sum_per_month,
+                transfer.c.id.label('transfer_id'),
+                transfer.c.time.label('transfer_time'),
+                transfer.c.country.label('transfer_country'),
+                transfer.c.currency.label('transfer_currency'),
+                transfer.c.sum.label('transfer_sum')
+            ]).select_from(limit.outerjoin(transfer))
 
     async def exists(self, id: int):
         async with self.__db.acquire() as conn:
@@ -15,17 +31,19 @@ class LimitService:
 
     async def get_list(self):
         async with self.__db.acquire() as conn:
-            cursor = await conn.execute(limit.select())
+            cursor = await conn.execute(self.__select_data)
             records = await cursor.fetchall()
-        return self.__list_to_dict(records)
+
+        return self.__parse_data(records)
 
     async def get_item(self, id: int):
         await self.__check_id(id)
 
         async with self.__db.acquire() as conn:
-            cursor = await conn.execute(limit.select().where(limit.c.id == id))
-            record = await cursor.fetchone()
-        return self.__item_to_dict(record)
+            cursor = await conn.execute(self.__select_data.where(limit.c.id == id))
+            records = await cursor.fetchall()
+
+        return self.__parse_data(records)[0]
 
     async def add(self, data: dict):
         async with self.__db.acquire() as conn:
@@ -49,33 +67,34 @@ class LimitService:
         if id is None or not await self.exists(id):
             raise ValueError('Incorrect identifier of limit.')
 
-    def __list_to_dict(self, records: list):
+    def __parse_data(self, records: list):
         result = []
-        for item in records:
-            result.append(self.__item_to_dict(item))
+        for limit, transfers in groupby(records, lambda x: (x[0], x[1], x[2], x[3])):
+            result.append(self.__parse_item(limit, transfers))
         return result
 
     @staticmethod
-    def __item_to_dict(item: tuple):
+    def __parse_item(item: tuple, transfers: list):
         if item is None:
             return None
 
-        return {
+        result = {
             'id': item[0],
             'country': item[1].value,
             'currency': item[2].value,
-            'max_sum_per_month': item[3],
+            'max_sum_per_month': item[3]
         }
 
-    @staticmethod
-    def __check_data(data: dict):
-        errors = []
+        transfers_of_item = []
+        for tr in transfers:
+            if tr[4] is not None:
+                transfers_of_item.append({
+                    'id': tr[4],
+                    'time': tr[5].strftime("%m/%d/%Y, %H:%M:%S"),
+                    'country': tr[6].value,
+                    'currency': tr[7].value,
+                    'sum': tr[8],
+                })
+        result['transfers'] = transfers_of_item
 
-        if data.get('country', None) is None:
-            errors.append('You must enter country.')
-        if data.get('max_sum_per_month', None) is None:
-            errors.append('You must enter max_sum_per_month.')
-        elif float(data.get('max_sum_per_month')) < 0:
-            errors.append('Value max_sum_per_month must be positive number.')
-
-        return errors
+        return result

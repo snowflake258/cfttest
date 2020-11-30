@@ -1,6 +1,6 @@
 from aiohttp.web import Application
 from routes import routes
-from db.connection import connect_db, close_db
+from db.configuration import connect_db, close_db
 import pytest
 
 

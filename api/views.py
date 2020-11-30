@@ -1,13 +1,14 @@
 from aiohttp.web import View, json_response, Request
-from marshmallow import ValidationError
+from containers import Container
 from services import LimitService, TransferSerivce
 from api.schemes import LimitSchema, TransferSchema
+from api.responses import json_response_400
 
 
 class LimitView(View):
     def __init__(self, request: Request):
-        self.__limit_service = LimitService(request.app['db'])
         super().__init__(request)
+        self.__limit_service = Container.limit_service(request.app['db'])
 
     async def get(self):
         if self.__get_id is None:
@@ -15,33 +16,31 @@ class LimitView(View):
 
         try:
             return json_response(status=200, data={'limit': await self.__limit_service.get_item(self.__get_id)})
-        except ValueError as error:
-            return json_response(status=400, data={'errors': [str(error)]})
+        except Exception as exp:
+            return json_response_400(exp)
 
     async def post(self):
         try:
             data = await LimitSchema().load(await self.request.json())
             limit_id = await self.__limit_service.add(data)
             return json_response(status=200, data={'limit_id': limit_id})
-        except ValidationError as error:
-            return json_response(status=400, data={'errors': error.messages})
+        except Exception as exp:
+            return json_response_400(exp)
 
     async def put(self):
         try:
             data = await LimitSchema().load(await self.request.json())
             await self.__limit_service.update(self.__get_id, data)
             return json_response(status=200)
-        except ValidationError as error:
-            return json_response(status=400, data={'errors': error.messages})
-        except ValueError as error:
-            return json_response(status=400, data={'errors': [str(error)]})
+        except Exception as exp:
+            return json_response_400(exp)
 
     async def delete(self):
         try:
             await self.__limit_service.delete(self.__get_id)
             return json_response(status=200)
-        except ValueError as error:
-            return json_response(status=400, data={'errors': [str(error)]})
+        except Exception as exp:
+            return json_response_400(exp)
 
     @property
     def __get_id(self):
@@ -51,9 +50,8 @@ class LimitView(View):
 class TransferView(View):
     def __init__(self, request: Request):
         super().__init__(request)
-
-        self.__limit_service = LimitService(request.app['db'])
-        self.__transfer_service = TransferSerivce(request.app['db'])
+        self.__limit_service = Container.limit_service(request.app['db'])
+        self.__transfer_service = Container.transfer_service(request.app['db'])
 
     async def post(self):
         try:
@@ -62,5 +60,5 @@ class TransferView(View):
 
             transfer_id = await self.__transfer_service.make_transfer(data)
             return json_response(status=200, data={'transfer_id': transfer_id})
-        except ValidationError as error:
-            return json_response(status=400, data={'errors': error.messages})
+        except Exception as exp:
+            return json_response_400(exp)

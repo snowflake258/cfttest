@@ -1,6 +1,7 @@
 from aiohttp.web import Application, run_app
-from db.connection import connect_db, close_db
+from db.configuration import connect_db, close_db
 from routes import routes
+from containers import Container
 
 
 app = Application()
