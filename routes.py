@@ -1,5 +1,5 @@
 from aiohttp.web import route
-from views import LimitView, TransferView
+from api.views import LimitView, TransferView
 
 routes = [
     route('GET', '/limit', LimitView),

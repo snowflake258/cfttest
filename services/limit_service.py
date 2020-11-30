@@ -20,33 +20,34 @@ class LimitService:
         return self.__list_to_dict(records)
 
     async def get_item(self, id: int):
+        await self.__check_id(id)
+
         async with self.__db.acquire() as conn:
             cursor = await conn.execute(limit.select().where(limit.c.id == id))
             record = await cursor.fetchone()
         return self.__item_to_dict(record)
 
     async def add(self, data: dict):
-        errors = self.__check_data(data)
-        if len(errors) > 0:
-            return {'ok': False, 'errors': errors}
-
         async with self.__db.acquire() as conn:
             cursor = await conn.execute(limit.insert().values(**data))
             limit_id = await cursor.scalar()
-        return {'ok': True, 'limit_id': limit_id}
+        return limit_id
 
     async def update(self, id: int, data: dict):
-        errors = self.__check_data(data)
-        if len(errors) > 0:
-            return {'ok': False, 'errors': errors}
+        await self.__check_id(id)
 
         async with self.__db.acquire() as conn:
             await conn.execute(limit.update().where(limit.c.id == id).values(**data))
-        return {'ok': True}
 
     async def delete(self, id: int):
+        await self.__check_id(id)
+
         async with self.__db.acquire() as conn:
             await conn.execute(limit.delete().where(limit.c.id == id))
+
+    async def __check_id(self, id: int):
+        if id is None or not await self.exists(id):
+            raise ValueError('Incorrect identifier of limit.')
 
     def __list_to_dict(self, records: list):
         result = []
@@ -56,6 +57,9 @@ class LimitService:
 
     @staticmethod
     def __item_to_dict(item: tuple):
+        if item is None:
+            return None
+
         return {
             'id': item[0],
             'country': item[1].value,
