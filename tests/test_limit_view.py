@@ -30,6 +30,12 @@ async def test_limit_view_post(cli):
     )
     assert resp.status == 200
 
+    resp = await cli.post(
+        '/limit',
+        data=json.dumps(dict(country="ERR", currency="ERR", max_sum_per_month="0"))
+    )
+    assert resp.status == 400
+
 
 async def test_limit_view_put(cli):
     resp = await cli.put(
@@ -44,6 +50,12 @@ async def test_limit_view_put(cli):
         data=json.dumps(dict(country="RUS", currency="RUB", max_sum_per_month="11.111"))
     )
     assert resp.status == 200
+
+    resp = await cli.put(
+        '/limit/0',
+        data=json.dumps(dict(country="ERR", currency="ERR", max_sum_per_month="0"))
+    )
+    assert resp.status == 400
 
 
 async def test_limit_view_delete(cli):
