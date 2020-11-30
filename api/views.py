@@ -50,6 +50,7 @@ class TransferView(View):
     def __init__(self, request: Request):
         super().__init__(request)
         self.__limit_service = Container.limit_service(request.app['db'])
+        self.__transfer_service = Container.transfer_service(request.app['db'])
 
     async def post(self):
         try:
