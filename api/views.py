@@ -55,17 +55,12 @@ class TransferView(View):
     async def post(self):
         try:
             data = await self.request.json()
-            limit, transfers = await self.__load_data(data.get('limit_id', None))
+            limit = await self.__limit_service.get_item(data['limit_id'])
 
-            schema = TransferSchema(limit, transfers)
+            schema = TransferSchema(limit)
             validated_data = schema.load(data)
 
             transfer_id = await self.__transfer_service.make_transfer(validated_data)
             return json_response(status=200, data={'transfer_id': transfer_id})
         except Exception as exp:
             return json_response_400(exp)
-
-    async def __load_data(self, limit_id: int):
-        if limit_id is None:
-            return None, None
-        return await self.__limit_service.get_item(limit_id), await self.__transfer_service.get_transfers(limit_id)

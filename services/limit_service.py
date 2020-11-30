@@ -90,7 +90,7 @@ class LimitService:
             if tr[4] is not None:
                 transfers_of_item.append({
                     'id': tr[4],
-                    'time': tr[5].strftime("%m/%d/%Y, %H:%M:%S"),
+                    'time': tr[5].strftime("%m/%d/%Y %H:%M:%S"),
                     'country': tr[6].value,
                     'currency': tr[7].value,
                     'sum': tr[8],
