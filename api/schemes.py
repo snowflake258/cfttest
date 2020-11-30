@@ -16,26 +16,17 @@ class TransferSchema(Schema):
     currency = fields.String(required=True, validate=CurrencyValidator)
     limit_id = fields.Integer(required=True)
 
-    def __init__(self, limit_service, transfer_service):
+    def __init__(self, limit, transfers):
         super().__init__()
 
         self.__limit = None
         self.__transfers = None
 
-        self.__limit_service = limit_service
-        self.__transfer_service = transfer_service
-
-    @pre_load(pass_many=False)
-    async def pre_load(self, data, **kwargs):
-        limit_id = data.get('limit_id', None)
-
-        if limit_id is not None and await self.__limit_service.exists(limit_id):
-            self.__limit = await self.__limit_service.get_item(limit_id)
-            self.__transfers = await self.__transfer_service.get_transfers(limit_id)
-        return data
+        self.__limit = limit
+        self.__transfers = transfers
 
     @validates('sum')
-    async def validate_sum(self, value):
+    def validate_sum(self, value):
         if self.__limit is None or self.__transfers is None:
             return
 
@@ -47,7 +38,7 @@ class TransferSchema(Schema):
                                   f'Allowed sum for transfer - {allowed_sum}.')
 
     @validates('currency')
-    async def validate_currency(self, value):
+    def validate_currency(self, value):
         if self.__limit is None:
             return
 
@@ -55,8 +46,8 @@ class TransferSchema(Schema):
             raise ValidationError(f'Incorrect currency. You must use {self.__limit["currency"]}.')
 
     @validates('limit_id')
-    async def validate_limit(self, value):
-        if not await self.__limit_service.exists(value):
+    def validate_limit(self, value):
+        if not self.__limit is not None:
             raise ValidationError(f'Limit with \'id\' equals {value} doesn\'t exists.')
 
     @staticmethod
